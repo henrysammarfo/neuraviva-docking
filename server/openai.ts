@@ -1,7 +1,18 @@
 import OpenAI from "openai";
 
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy-load OpenAI client to avoid initialization errors when API key is not set
+let openaiClient: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+  if (!openaiClient) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OpenAI API key is not configured. Please set the OPENAI_API_KEY secret.");
+    }
+    // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openaiClient;
+}
 
 export interface ReportGenerationParams {
   proteinTarget: string;
@@ -18,6 +29,8 @@ export async function generateDockingReport(params: ReportGenerationParams): Pro
   fullContent: string;
   performanceMetrics: any;
 }> {
+  const openai = getOpenAIClient();
+  
   const prompt = `You are a molecular biology AI agent generating a comprehensive docking analysis report for NeuraViva Research.
 
 SIMULATION DATA:
@@ -74,6 +87,8 @@ export async function categorizeDockingData(params: {
   ligandName: string;
   bindingAffinity: number;
 }): Promise<{ tags: Array<{ type: string; value: string }> }> {
+  const openai = getOpenAIClient();
+  
   const prompt = `Analyze this molecular docking simulation and generate categorization tags:
   
 Protein: ${params.proteinTarget}

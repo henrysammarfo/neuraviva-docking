@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Dna, Activity, Zap, FileJson, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowRight, Dna, Activity, Zap, FileJson, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import moleculeImage from "@assets/generated_images/3d_molecular_docking_simulation_visualization.png";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const data = [
   { name: '00:00', value: 2400 },
@@ -17,6 +18,26 @@ const data = [
 ];
 
 export default function Dashboard() {
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['/api/stats'],
+    queryFn: async () => {
+      const res = await fetch('/api/stats');
+      if (!res.ok) throw new Error('Failed to fetch stats');
+      return res.json();
+    }
+  });
+
+  const { data: simulations, isLoading: simsLoading } = useQuery({
+    queryKey: ['/api/simulations'],
+    queryFn: async () => {
+      const res = await fetch('/api/simulations');
+      if (!res.ok) throw new Error('Failed to fetch simulations');
+      return res.json();
+    }
+  });
+
+  const recentSimulations = simulations?.slice(0, 3) || [];
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -35,32 +56,43 @@ export default function Dashboard() {
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Active Simulations", value: "12", icon: Activity, trend: "+2.5%", color: "text-primary" },
-          { label: "Binding Success Rate", value: "87.4%", icon: CheckCircle2, trend: "+5.1%", color: "text-green-400" },
-          { label: "Compute Nodes", value: "148", icon: Cpu, trend: "Stable", color: "text-purple-400" },
-          { label: "Pending Reports", value: "3", icon: FileJson, trend: "-1", color: "text-orange-400" },
-        ].map((metric, i) => (
-          <motion.div
-            key={metric.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-          >
-            <Card className="bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-colors">
+        {statsLoading ? (
+          Array(4).fill(0).map((_, i) => (
+            <Card key={i} className="bg-card/50 backdrop-blur-sm border-border/50">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between space-y-0 pb-2">
-                  <p className="text-sm font-medium text-muted-foreground">{metric.label}</p>
-                  <metric.icon className={`h-4 w-4 ${metric.color}`} />
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                    <div className="text-2xl font-bold font-display">{metric.value}</div>
-                    <span className="text-xs text-muted-foreground bg-secondary/10 px-1.5 py-0.5 rounded">{metric.trend}</span>
-                </div>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-8 w-16" />
               </CardContent>
             </Card>
-          </motion.div>
-        ))}
+          ))
+        ) : (
+          [
+            { label: "Active Simulations", value: stats?.activeSimulations || 0, icon: Activity, trend: "+2.5%", color: "text-primary" },
+            { label: "Binding Success Rate", value: stats?.successRate || "0%", icon: CheckCircle2, trend: "+5.1%", color: "text-green-400" },
+            { label: "Compute Nodes", value: stats?.computeNodes || 148, icon: Cpu, trend: "Stable", color: "text-purple-400" },
+            { label: "Total Simulations", value: stats?.totalSimulations || 0, icon: FileJson, trend: `+${stats?.activeSimulations || 0}`, color: "text-orange-400" },
+          ].map((metric, i) => (
+            <motion.div
+              key={metric.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+            >
+              <Card className="bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-colors">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between space-y-0 pb-2">
+                    <p className="text-sm font-medium text-muted-foreground">{metric.label}</p>
+                    <metric.icon className={`h-4 w-4 ${metric.color}`} />
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="text-2xl font-bold font-display">{metric.value}</div>
+                    <span className="text-xs text-muted-foreground bg-secondary/10 px-1.5 py-0.5 rounded">{metric.trend}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -130,41 +162,47 @@ export default function Dashboard() {
             <Button variant="ghost" className="text-xs">View All <ArrowRight className="w-3 h-3 ml-1" /></Button>
         </CardHeader>
         <CardContent>
-            <div className="space-y-4">
-                {[
-                    { id: "SIM-8821", target: "SARS-CoV-2 Mpro", ligand: "N3 Inhibitor", status: "Completed", score: "-9.4 kcal/mol", time: "2m ago" },
-                    { id: "SIM-8822", target: "HIV-1 Protease", ligand: "Saquinavir", status: "Processing", score: "Calculating...", time: "15m ago" },
-                    { id: "SIM-8823", target: "HSP90", ligand: "Geldanamycin", status: "Queued", score: "Pending", time: "1h ago" },
-                ].map((sim) => (
-                    <div key={sim.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/5 border border-border/50 hover:border-primary/30 transition-colors group">
-                        <div className="flex items-center gap-4">
-                            <div className={`p-2 rounded-full ${sim.status === 'Completed' ? 'bg-green-500/10 text-green-500' : sim.status === 'Processing' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                                <Dna className="w-4 h-4" />
-                            </div>
-                            <div>
-                                <div className="font-medium text-sm text-foreground flex items-center gap-2">
-                                    {sim.target} 
-                                    <span className="text-xs text-muted-foreground font-normal">with {sim.ligand}</span>
-                                </div>
-                                <div className="text-xs text-muted-foreground font-mono mt-0.5">{sim.id}</div>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-6">
-                            <div className="text-right">
-                                <div className="text-sm font-bold font-mono text-foreground">{sim.score}</div>
-                                <div className="text-xs text-muted-foreground">{sim.status}</div>
-                            </div>
-                            <div className="text-xs text-muted-foreground w-16 text-right">{sim.time}</div>
-                        </div>
-                    </div>
+            {simsLoading ? (
+              <div className="space-y-4">
+                {Array(3).fill(0).map((_, i) => (
+                  <Skeleton key={i} className="h-20 w-full" />
                 ))}
-            </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                  {recentSimulations.map((sim: any) => (
+                      <div key={sim.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/5 border border-border/50 hover:border-primary/30 transition-colors group">
+                          <div className="flex items-center gap-4">
+                              <div className={`p-2 rounded-full ${sim.status === 'analyzed' ? 'bg-green-500/10 text-green-500' : sim.status === 'processing' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                                  <Dna className="w-4 h-4" />
+                              </div>
+                              <div>
+                                  <div className="font-medium text-sm text-foreground flex items-center gap-2">
+                                      {sim.proteinTarget} 
+                                      <span className="text-xs text-muted-foreground font-normal">with {sim.ligandName}</span>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground font-mono mt-0.5">{sim.simulationId}</div>
+                              </div>
+                          </div>
+                          <div className="flex items-center gap-6">
+                              <div className="text-right">
+                                  <div className="text-sm font-bold font-mono text-foreground">{sim.bindingAffinity} kcal/mol</div>
+                                  <div className="text-xs text-muted-foreground capitalize">{sim.status}</div>
+                              </div>
+                              <div className="text-xs text-muted-foreground w-16 text-right">
+                                {new Date(sim.createdAt).toLocaleDateString()}
+                              </div>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+            )}
         </CardContent>
       </Card>
     </div>
   );
 }
-// Helper component for icon
+
 function Cpu({ className }: { className?: string }) {
     return (
         <svg

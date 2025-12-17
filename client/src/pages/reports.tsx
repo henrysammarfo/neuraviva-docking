@@ -1,25 +1,19 @@
 import { useState } from "react";
-import { FileText, Download, Share2, Printer, ChevronRight } from "lucide-react";
+import { Share2, Download, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import reportImage from "@assets/generated_images/chemical_structure_report_diagram.png";
+import { Skeleton } from "@/components/ui/skeleton";
 import moleculeImage from "@assets/generated_images/3d_molecular_docking_simulation_visualization.png";
+import { useQuery } from "@tanstack/react-query";
 import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
     RadarChart,
     PolarGrid,
     PolarAngleAxis,
     PolarRadiusAxis,
-    Radar
+    Radar,
+    Legend,
+    ResponsiveContainer
 } from "recharts";
 
 const performanceData = [
@@ -31,15 +25,26 @@ const performanceData = [
   { subject: 'Toxicity Risk', A: 65, B: 85, fullMark: 150 },
 ];
 
-const interactionData = [
-    { name: 'H-Bonds', value: 4 },
-    { name: 'Hydrophobic', value: 7 },
-    { name: 'Pi-Stacking', value: 2 },
-    { name: 'Salt Bridges', value: 1 },
-];
-
 export default function Reports() {
-  const [selectedReport, setSelectedReport] = useState("REP-2024-001");
+  const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
+
+  const { data: reports, isLoading: reportsLoading } = useQuery({
+    queryKey: ['/api/reports'],
+    queryFn: async () => {
+      const res = await fetch('/api/reports');
+      if (!res.ok) throw new Error('Failed to fetch reports');
+      return res.json();
+    }
+  });
+
+  const selectedReport = selectedReportId 
+    ? reports?.find((r: any) => r.id === selectedReportId)
+    : reports?.[0];
+
+  // Auto-select first report when reports load
+  if (!selectedReportId && reports && reports.length > 0) {
+    setSelectedReportId(reports[0].id);
+  }
 
   return (
     <div className="h-[calc(100vh-10rem)] flex flex-col md:flex-row gap-6">
@@ -47,34 +52,51 @@ export default function Reports() {
       <div className="w-full md:w-80 flex flex-col gap-4">
         <div>
             <h2 className="text-2xl font-display font-bold">Reports</h2>
-            <p className="text-sm text-muted-foreground">Generated analysis documents.</p>
+            <p className="text-sm text-muted-foreground">AI-generated analysis documents.</p>
         </div>
         
         <Card className="flex-1 bg-card/50 backdrop-blur-sm border-border/50 overflow-hidden flex flex-col">
             <ScrollArea className="flex-1">
-                <div className="p-4 space-y-3">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                        <div 
-                            key={i}
-                            onClick={() => setSelectedReport(`REP-2024-00${i}`)}
-                            className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                                selectedReport === `REP-2024-00${i}` 
-                                ? "bg-primary/10 border-primary/50 shadow-[0_0_10px_rgba(var(--primary),0.1)]" 
-                                : "bg-card border-border/50 hover:bg-secondary/5 hover:border-border"
-                            }`}
-                        >
-                            <div className="flex justify-between items-start mb-1">
-                                <span className="font-medium text-sm">Target: EGFR-TK</span>
-                                <span className="text-[10px] text-muted-foreground">Dec 1{i}</span>
-                            </div>
-                            <div className="text-xs text-muted-foreground mb-2">Sim ID: NV-2024-08{i}</div>
-                            <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-[10px] h-5">Full Analysis</Badge>
-                                {i === 1 && <Badge variant="default" className="text-[10px] h-5 bg-primary text-primary-foreground">New</Badge>}
-                            </div>
-                        </div>
+                {reportsLoading ? (
+                  <div className="p-4 space-y-3">
+                    {Array(3).fill(0).map((_, i) => (
+                      <Skeleton key={i} className="h-24 w-full" />
                     ))}
-                </div>
+                  </div>
+                ) : reports?.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <p className="mb-4">No reports generated yet</p>
+                    <p className="text-sm">Generate reports from the Explorer page</p>
+                  </div>
+                ) : (
+                  <div className="p-4 space-y-3">
+                      {reports?.map((report: any) => (
+                          <div 
+                              key={report.id}
+                              onClick={() => setSelectedReportId(report.id)}
+                              className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                  selectedReport?.id === report.id
+                                  ? "bg-primary/10 border-primary/50 shadow-[0_0_10px_rgba(var(--primary),0.1)]" 
+                                  : "bg-card border-border/50 hover:bg-secondary/5 hover:border-border"
+                              }`}
+                          >
+                              <div className="flex justify-between items-start mb-1">
+                                  <span className="font-medium text-sm line-clamp-1">{report.title}</span>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {new Date(report.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mb-2">{report.reportId}</div>
+                              <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-[10px] h-5">Full Analysis</Badge>
+                                  {report.solanaVerificationHash && (
+                                    <Badge variant="default" className="text-[10px] h-5 bg-secondary text-secondary-foreground">Verified</Badge>
+                                  )}
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+                )}
             </ScrollArea>
         </Card>
       </div>
@@ -83,94 +105,136 @@ export default function Reports() {
       <div className="flex-1 flex flex-col min-h-0">
          <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="text-foreground font-medium">{selectedReport}</span>
-                <ChevronRight className="w-4 h-4" />
-                <span>Preview</span>
+                <span className="text-foreground font-medium">{selectedReport?.reportId || 'Select a report'}</span>
+                {selectedReport && (
+                  <>
+                    <ChevronRight className="w-4 h-4" />
+                    <span>Preview</span>
+                  </>
+                )}
             </div>
-            <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="gap-2">
-                    <Share2 className="w-4 h-4" /> Share
-                </Button>
-                <Button size="sm" className="gap-2 bg-primary text-primary-foreground">
-                    <Download className="w-4 h-4" /> Download PDF
-                </Button>
-            </div>
+            {selectedReport && (
+              <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="gap-2">
+                      <Share2 className="w-4 h-4" /> Share
+                  </Button>
+                  <Button size="sm" className="gap-2 bg-primary text-primary-foreground">
+                      <Download className="w-4 h-4" /> Download PDF
+                  </Button>
+              </div>
+            )}
          </div>
 
-         <div className="flex-1 bg-white text-slate-900 rounded-lg overflow-hidden shadow-2xl overflow-y-auto">
-            <div className="max-w-4xl mx-auto p-12 space-y-8">
-                {/* Report Header */}
-                <div className="flex justify-between items-end border-b border-slate-200 pb-6">
-                    <div>
-                        <h1 className="text-3xl font-bold font-display text-slate-900">Docking Analysis Report</h1>
-                        <p className="text-slate-500 mt-2">Generated by NeuraViva AI Agent • December 17, 2024</p>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-xs font-mono text-slate-400 uppercase tracking-wider">Reference ID</div>
-                        <div className="font-mono font-bold text-slate-700">{selectedReport}</div>
-                    </div>
-                </div>
+         {!selectedReport ? (
+           <div className="flex-1 flex items-center justify-center bg-card/30 rounded-lg border border-border/50">
+             <div className="text-center text-muted-foreground">
+               {reportsLoading ? (
+                 <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+               ) : (
+                 <p>Select a report to view</p>
+               )}
+             </div>
+           </div>
+         ) : (
+           <div className="flex-1 bg-white text-slate-900 rounded-lg overflow-hidden shadow-2xl overflow-y-auto">
+              <div className="max-w-4xl mx-auto p-12 space-y-8">
+                  {/* Report Header */}
+                  <div className="flex justify-between items-end border-b border-slate-200 pb-6">
+                      <div>
+                          <h1 className="text-3xl font-bold font-display text-slate-900">Docking Analysis Report</h1>
+                          <p className="text-slate-500 mt-2">
+                            Generated by NeuraViva AI Agent • {new Date(selectedReport.generatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                          </p>
+                      </div>
+                      <div className="text-right">
+                          <div className="text-xs font-mono text-slate-400 uppercase tracking-wider">Reference ID</div>
+                          <div className="font-mono font-bold text-slate-700">{selectedReport.reportId}</div>
+                      </div>
+                  </div>
 
-                {/* Executive Summary */}
-                <section className="space-y-4">
-                    <h3 className="text-lg font-bold text-slate-900 border-l-4 border-cyan-500 pl-3">Executive Summary</h3>
-                    <p className="text-slate-600 leading-relaxed text-sm">
-                        The molecular docking simulation for <strong className="text-slate-900">Gefitinib</strong> against the target <strong className="text-slate-900">EGFR-TK</strong> demonstrated high binding affinity (-9.8 kcal/mol) with a stable RMSD of 1.2Å. The compound exhibits favorable interaction profiles within the active site, primarily driven by hydrophobic interactions and key hydrogen bonds with Met793. Predicted efficacy scores suggest this candidate is viable for lead optimization.
-                    </p>
-                </section>
+                  {/* Executive Summary */}
+                  <section className="space-y-4">
+                      <h3 className="text-lg font-bold text-slate-900 border-l-4 border-cyan-500 pl-3">Executive Summary</h3>
+                      <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap">
+                          {selectedReport.executiveSummary}
+                      </p>
+                  </section>
 
-                {/* Visuals */}
-                <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wide">Interaction Profile</h4>
-                        <div className="h-64 w-full border border-slate-100 rounded bg-slate-50 p-4">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={performanceData}>
-                                    <PolarGrid stroke="#e2e8f0" />
-                                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10 }} />
-                                    <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
-                                    <Radar name="Candidate" dataKey="A" stroke="#06b6d4" strokeWidth={2} fill="#06b6d4" fillOpacity={0.3} />
-                                    <Radar name="Reference" dataKey="B" stroke="#94a3b8" strokeWidth={2} fill="#94a3b8" fillOpacity={0.1} />
-                                    <Legend />
-                                </RadarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                    <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wide">Binding Pose Visualization</h4>
-                        <div className="h-64 w-full rounded overflow-hidden border border-slate-100 bg-slate-900 relative">
-                            <img src={moleculeImage} className="w-full h-full object-cover opacity-80" alt="Binding Pose" />
-                            <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded backdrop-blur-md">
-                                Pose Rank: 1
+                  {/* Visuals */}
+                  <div className="grid grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                          <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wide">Interaction Profile</h4>
+                          <div className="h-64 w-full border border-slate-100 rounded bg-slate-50 p-4">
+                              <ResponsiveContainer width="100%" height="100%">
+                                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={performanceData}>
+                                      <PolarGrid stroke="#e2e8f0" />
+                                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10 }} />
+                                      <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
+                                      <Radar name="Candidate" dataKey="A" stroke="#06b6d4" strokeWidth={2} fill="#06b6d4" fillOpacity={0.3} />
+                                      <Radar name="Reference" dataKey="B" stroke="#94a3b8" strokeWidth={2} fill="#94a3b8" fillOpacity={0.1} />
+                                      <Legend />
+                                  </RadarChart>
+                              </ResponsiveContainer>
+                          </div>
+                      </div>
+                      <div className="space-y-4">
+                          <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wide">Binding Pose Visualization</h4>
+                          <div className="h-64 w-full rounded overflow-hidden border border-slate-100 bg-slate-900 relative">
+                              <img src={moleculeImage} className="w-full h-full object-cover opacity-80" alt="Binding Pose" />
+                              <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded backdrop-blur-md">
+                                  Pose Rank: 1
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* Detailed Metrics */}
+                  {selectedReport.performanceMetrics && (
+                    <section className="space-y-4">
+                        <h3 className="text-lg font-bold text-slate-900 border-l-4 border-purple-500 pl-3">Key Performance Metrics</h3>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="p-4 bg-slate-50 rounded border border-slate-100">
+                                <div className="text-xs text-slate-500 uppercase">Binding Energy</div>
+                                <div className="text-2xl font-bold text-slate-900 mt-1">
+                                  {selectedReport.performanceMetrics.bindingEnergy} 
+                                  <span className="text-xs font-normal text-slate-400 ml-1">kcal/mol</span>
+                                </div>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded border border-slate-100">
+                                <div className="text-xs text-slate-500 uppercase">Ligand Efficiency</div>
+                                <div className="text-2xl font-bold text-slate-900 mt-1">
+                                  {selectedReport.performanceMetrics.ligandEfficiency?.toFixed(2)} 
+                                  <span className="text-xs font-normal text-slate-400 ml-1">kcal/mol/HA</span>
+                                </div>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded border border-slate-100">
+                                <div className="text-xs text-slate-500 uppercase">Inhibition Constant (Ki)</div>
+                                <div className="text-2xl font-bold text-slate-900 mt-1">
+                                  {selectedReport.performanceMetrics.inhibitionConstant?.toFixed(1)} 
+                                  <span className="text-xs font-normal text-slate-400 ml-1">nM</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </section>
+                  )}
 
-                {/* Detailed Metrics */}
-                <section className="space-y-4">
-                    <h3 className="text-lg font-bold text-slate-900 border-l-4 border-purple-500 pl-3">Key Performance Metrics</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="p-4 bg-slate-50 rounded border border-slate-100">
-                            <div className="text-xs text-slate-500 uppercase">Binding Energy</div>
-                            <div className="text-2xl font-bold text-slate-900 mt-1">-9.8 <span className="text-xs font-normal text-slate-400">kcal/mol</span></div>
-                        </div>
-                        <div className="p-4 bg-slate-50 rounded border border-slate-100">
-                            <div className="text-xs text-slate-500 uppercase">Ligand Efficiency</div>
-                            <div className="text-2xl font-bold text-slate-900 mt-1">0.42 <span className="text-xs font-normal text-slate-400">kcal/mol/HA</span></div>
-                        </div>
-                        <div className="p-4 bg-slate-50 rounded border border-slate-100">
-                            <div className="text-xs text-slate-500 uppercase">Inhibition Constant (Ki)</div>
-                            <div className="text-2xl font-bold text-slate-900 mt-1">12.5 <span className="text-xs font-normal text-slate-400">nM</span></div>
-                        </div>
-                    </div>
-                </section>
+                  {/* Full Content */}
+                  <section className="space-y-4">
+                      <h3 className="text-lg font-bold text-slate-900 border-l-4 border-blue-500 pl-3">Detailed Analysis</h3>
+                      <div className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap">
+                          {selectedReport.fullContent}
+                      </div>
+                  </section>
 
-                <div className="pt-8 border-t border-slate-100 text-center text-xs text-slate-400">
-                    <p>Confidential & Proprietary • NeuraViva Research • Generated via Solana Blockchain Verification</p>
-                </div>
-            </div>
-         </div>
+                  <div className="pt-8 border-t border-slate-100 text-center text-xs text-slate-400">
+                      <p>Confidential & Proprietary • NeuraViva Research • Generated via Solana Blockchain Verification</p>
+                      {selectedReport.solanaVerificationHash && (
+                        <p className="mt-1 font-mono">Hash: {selectedReport.solanaVerificationHash}</p>
+                      )}
+                  </div>
+              </div>
+           </div>
+         )}
       </div>
     </div>
   );
