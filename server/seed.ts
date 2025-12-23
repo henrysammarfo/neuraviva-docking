@@ -17,7 +17,10 @@ async function seed() {
         hBonds: 4,
         hydrophobic: 7,
         piStacking: 2,
-        saltBridges: 1
+        saltBridges: 1,
+        stabilityScore: 85,
+        drugLikenessScore: 78,
+        toxicityRisk: "low"
       },
       visualizationUrl: null,
       solanaTransactionId: "5KJp8XjJ1YrZx9qN4wP2mVvH3fL7dG8sK9tR6uQ1xWzY"
@@ -61,7 +64,10 @@ async function seed() {
         hBonds: 3,
         hydrophobic: 8,
         piStacking: 3,
-        saltBridges: 0
+        saltBridges: 0,
+        stabilityScore: 92,
+        drugLikenessScore: 82,
+        toxicityRisk: "low"
       },
       visualizationUrl: null,
       solanaTransactionId: "8NqW2kL5pXzR9mJ7vH4tF6dS3gY1oU9eQ8rT2iP5xKwZ"
@@ -79,7 +85,10 @@ async function seed() {
         hBonds: 5,
         hydrophobic: 6,
         piStacking: 1,
-        saltBridges: 2
+        saltBridges: 2,
+        stabilityScore: 88,
+        drugLikenessScore: 75,
+        toxicityRisk: "medium"
       },
       visualizationUrl: null,
       solanaTransactionId: "3HgF9jK2nMzP8vL5wT4sD7cR1qX6oY3eU9iN2tB5pKwA"
@@ -110,7 +119,10 @@ async function seed() {
         hBonds: 4,
         hydrophobic: 5,
         piStacking: 2,
-        saltBridges: 1
+        saltBridges: 1,
+        stabilityScore: 79,
+        drugLikenessScore: 68,
+        toxicityRisk: "low"
       },
       visualizationUrl: null,
       solanaTransactionId: "7MkP4qL9nWzX2vH8tF6sD3jR5oY1eU9iN2tB8pKwQ6cA"

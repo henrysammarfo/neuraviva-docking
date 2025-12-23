@@ -1,17 +1,16 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Lazy-load OpenAI client to avoid initialization errors when API key is not set
-let openaiClient: OpenAI | null = null;
+// Lazy-load Gemini client to avoid initialization errors when API key is not set
+let geminiClient: GoogleGenerativeAI | null = null;
 
-function getOpenAIClient(): OpenAI {
-  if (!openaiClient) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OpenAI API key is not configured. Please set the OPENAI_API_KEY secret.");
+function getGeminiClient(): GoogleGenerativeAI {
+  if (!geminiClient) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("Gemini API key is not configured. Please set the GEMINI_API_KEY secret.");
     }
-    // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    geminiClient = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   }
-  return openaiClient;
+  return geminiClient;
 }
 
 export interface ReportGenerationParams {
@@ -29,8 +28,9 @@ export async function generateDockingReport(params: ReportGenerationParams): Pro
   fullContent: string;
   performanceMetrics: any;
 }> {
-  const openai = getOpenAIClient();
-  
+  const genAI = getGeminiClient();
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+
   const prompt = `You are a molecular biology AI agent generating a comprehensive docking analysis report for NeuraViva Research.
 
 SIMULATION DATA:
@@ -58,27 +58,22 @@ Generate a detailed scientific report in JSON format with the following structur
 
 Make this sound professional, data-driven, and suitable for stakeholder presentations and research publications.`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-5",
-    messages: [
-      {
-        role: "system",
-        content: "You are an expert molecular biologist and computational chemist generating professional docking simulation reports. Your reports are used in grant proposals, research papers, and stakeholder presentations."
-      },
-      {
-        role: "user",
-        content: prompt
-      }
-    ],
-    response_format: { type: "json_object" },
-  });
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const text = response.text();
 
-  const result = JSON.parse(response.choices[0].message.content || "{}");
+  // Extract JSON from the response
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("Failed to parse JSON response from Gemini");
+  }
+
+  const parsedResult = JSON.parse(jsonMatch[0]);
 
   return {
-    executiveSummary: result.executiveSummary || "Analysis completed successfully.",
-    fullContent: result.fullContent || "Detailed report content.",
-    performanceMetrics: result.performanceMetrics || {}
+    executiveSummary: parsedResult.executiveSummary || "Analysis completed successfully.",
+    fullContent: parsedResult.fullContent || "Detailed report content.",
+    performanceMetrics: parsedResult.performanceMetrics || {}
   };
 }
 
@@ -87,10 +82,11 @@ export async function categorizeDockingData(params: {
   ligandName: string;
   bindingAffinity: number;
 }): Promise<{ tags: Array<{ type: string; value: string }> }> {
-  const openai = getOpenAIClient();
-  
+  const genAI = getGeminiClient();
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+
   const prompt = `Analyze this molecular docking simulation and generate categorization tags:
-  
+
 Protein: ${params.proteinTarget}
 Ligand: ${params.ligandName}
 Binding Affinity: ${params.bindingAffinity} kcal/mol
@@ -103,23 +99,23 @@ Generate tags in JSON format:
     { "type": "binding_strength", "value": "strong" | "moderate" | "weak" },
     { "type": "drug_class", "value": "..." }
   ]
-}`;
+}
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-5",
-    messages: [
-      {
-        role: "system",
-        content: "You are a data categorization AI for molecular docking simulations. Generate relevant tags for organization and retrieval."
-      },
-      {
-        role: "user",
-        content: prompt
-      }
-    ],
-    response_format: { type: "json_object" },
-  });
+Based on the binding affinity:
+- Strong: < -9.0 kcal/mol
+- Moderate: -9.0 to -7.0 kcal/mol
+- Weak: > -7.0 kcal/mol`;
 
-  const result = JSON.parse(response.choices[0].message.content || "{}");
-  return result;
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const text = response.text();
+
+  // Extract JSON from the response
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("Failed to parse JSON response from Gemini");
+  }
+
+  const parsedResult = JSON.parse(jsonMatch[0]);
+  return parsedResult;
 }

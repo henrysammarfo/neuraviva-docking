@@ -9,17 +9,31 @@ import {
   Bell, 
   Menu, 
   Hexagon,
-  Cpu
+  Cpu,
+  Wallet,
+  User,
+  LogOut
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useWalletContext } from "@/contexts/WalletContext";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { userProfile, disconnectWallet } = useWalletContext();
 
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/" },
@@ -125,18 +139,47 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="outline" className="hidden sm:flex items-center gap-2 border-primary/20 text-primary hover:bg-primary/10 hover:text-primary hover:border-primary/50 transition-all shadow-[0_0_10px_rgba(0,255,255,0.05)]">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                Wallet Connected
-            </Button>
+            <WalletMultiButton className="!bg-primary/10 !border-primary/20 !text-primary hover:!bg-primary/20 !transition-all !shadow-[0_0_10px_rgba(0,255,255,0.05)]" />
             <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
               <Bell className="w-5 h-5" />
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
             </Button>
-            <Avatar className="h-8 w-8 ring-2 ring-border ring-offset-2 ring-offset-background">
-              <AvatarImage src="https://github.com/shadcn.png" />
-              <AvatarFallback>NV</AvatarFallback>
-            </Avatar>
+            {userProfile && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8 ring-2 ring-border ring-offset-2 ring-offset-background">
+                      <AvatarImage src={userProfile.avatar} />
+                      <AvatarFallback>{userProfile.name?.charAt(0) || 'U'}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{userProfile.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {userProfile.walletAddress?.slice(0, 8)}...{userProfile.walletAddress?.slice(-8)}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Wallet className="mr-2 h-4 w-4" />
+                    <span>Wallet Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={disconnectWallet}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Disconnect Wallet</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </header>
 
