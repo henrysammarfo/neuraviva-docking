@@ -56,7 +56,7 @@ NeuraViva AI Docking Agent addresses two critical needs in computational drug di
 | Charts | Recharts |
 | Wallet | Solana Wallet Adapter (Phantom, Solflare) |
 | Authentication | Passport.js with secure scrypt hashing |
-| Storage | File-based JSON persistence |
+| Storage | Neon (PostgreSQL) with Drizzle ORM |
 
 ## 🚀 Getting Started
 
