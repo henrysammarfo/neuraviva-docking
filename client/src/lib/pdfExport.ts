@@ -22,14 +22,29 @@ export async function exportReportToPDF(reportElement: HTMLElement, reportData: 
         for (let i = 0; i < elements.length; i++) {
           const el = elements[i] as HTMLElement;
           // Forced override for any potential oklch usage
-          // We target common color properties
+          // We target common color properties and forcibly replace oklch strings
           const style = doc.defaultView?.getComputedStyle(el);
           if (style) {
-            if (style.color.includes('oklch')) el.style.color = '#1e293b';
-            if (style.backgroundColor.includes('oklch')) el.style.backgroundColor = '#ffffff';
-            if (style.borderColor.includes('oklch')) el.style.borderColor = '#e2e8f0';
-            if (style.fill.includes('oklch')) el.style.fill = '#1e293b';
-            if (style.stroke.includes('oklch')) el.style.stroke = '#1e293b';
+            // Some browsers/libraries crash even reading the property if it contains oklch
+            // So we also check the inline style and the computed style
+            const stylesToClean = ['color', 'backgroundColor', 'borderColor', 'fill', 'stroke', 'outlineColor'];
+
+            stylesToClean.forEach(prop => {
+              const val = (style as any)[prop];
+              if (val && typeof val === 'string' && val.includes('oklch')) {
+                // Determine a safe fallback based on the property
+                if (prop === 'backgroundColor') el.style.backgroundColor = '#ffffff';
+                else if (prop === 'borderColor' || prop === 'outlineColor') el.style.borderColor = '#e2e8f0';
+                else el.style.setProperty(prop, '#1e293b', 'important');
+              }
+            });
+          }
+
+          // Safety: If Tailwind 4 is injecting oklch via variables, we clear those too
+          if (el.tagName === 'BODY') {
+            el.className = el.className.replace(/\bdark\b/g, ''); // Force light mode
+            el.style.backgroundColor = '#ffffff';
+            el.style.color = '#1e293b';
           }
         }
       }
