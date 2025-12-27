@@ -247,13 +247,16 @@ export function registerRoutes(
         console.error("AI categorization failed:", aiError);
       }
 
-      // Trigger Agent Autonomy immediately for Vercel (simulating live background processing)
+      // Trigger Agent Autonomy immediately for Vercel
       if (process.env.VERCEL) {
-        const agent = await getDockingAgent();
-        // Fire and forget, or process in "background"
-        agent.processSimulation(simulation.id).catch(err => {
-          console.error("Agent background processing failed:", err);
-        });
+        try {
+          const agent = await getDockingAgent();
+          // Await processing to ensure completion in serverless environment
+          await agent.processSimulation(simulation.id);
+          console.log(`[routes] Agent analysis completed for simulation ${simulation.id}`);
+        } catch (err) {
+          console.error("[routes] Agent background processing failed:", err);
+        }
       }
 
       res.status(201).json(simulation);

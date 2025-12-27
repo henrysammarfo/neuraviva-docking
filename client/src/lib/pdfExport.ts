@@ -17,34 +17,76 @@ export async function exportReportToPDF(reportElement: HTMLElement, reportData: 
       windowWidth: reportElement.scrollWidth,
       windowHeight: reportElement.scrollHeight,
       onclone: (doc) => {
-        // Find all elements in the cloned document
+        // Find and remove all existing style and link tags to prevent parsing errors
+        const styleTags = doc.getElementsByTagName('style');
+        const linkTags = doc.getElementsByTagName('link');
+
+        Array.from(styleTags).forEach(tag => tag.remove());
+        Array.from(linkTags).forEach(tag => {
+          if (tag.rel === 'stylesheet') tag.remove();
+        });
+
+        // Inject a clean, hex-only stylesheet
+        const cleanStyle = doc.createElement('style');
+        cleanStyle.innerHTML = `
+          * { 
+            color: #1e293b !important; 
+            border-color: #e2e8f0 !important; 
+            background-color: transparent !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+            background-image: none !important;
+          }
+          body { background-color: #ffffff !important; font-family: sans-serif !important; }
+          .pdf-export-container { background-color: #ffffff !important; padding: 40px !important; }
+          h1 { font-size: 28px !important; font-weight: bold !important; margin-bottom: 24px !important; color: #0f172a !important; }
+          h3 { font-size: 20px !important; font-weight: bold !important; margin-top: 24px !important; margin-bottom: 12px !important; border-left: 4px solid #06b6d4 !important; padding-left: 12px !important; color: #0f172a !important; }
+          p { font-size: 14px !important; line-height: 1.6 !important; color: #334155 !important; margin-bottom: 12px !important; }
+          .grid { display: block !important; }
+          .grid-cols-2 { display: block !important; }
+          .gap-8 { margin-bottom: 24px !important; }
+          .border-b { border-bottom: 1px solid #e2e8f0 !important; padding-bottom: 16px !important; }
+          .border-t { border-top: 1px solid #e2e8f0 !important; padding-top: 16px !important; }
+          .bg-slate-50 { background-color: #f1f5f9 !important; }
+          .p-4 { padding: 16px !important; }
+          .p-6 { padding: 24px !important; }
+          .rounded-lg { border-radius: 8px !important; border: 1px solid #e2e8f0 !important; }
+          .font-mono { font-family: monospace !important; font-size: 12px !important; }
+          .text-primary { color: #0891b2 !important; }
+          .text-slate-400 { color: #94a3b8 !important; }
+          .text-slate-600 { color: #475569 !important; }
+          .text-slate-900 { color: #0f172a !important; }
+          .max-w-4xl { max-width: 100% !important; }
+          .space-y-8 > * + * { margin-top: 32px !important; }
+          .space-y-4 > * + * { margin-top: 16px !important; }
+          .inline-flex { display: inline-flex !important; }
+          .items-center { align-items: center !important; }
+          .gap-2 { gap: 8px !important; }
+          .px-3 { padding-left: 12px !important; padding-right: 12px !important; }
+          .py-1 { padding-top: 4px !important; padding-bottom: 4px !important; }
+          .rounded-full { border-radius: 9999px !important; }
+          .bg-green-50 { background-color: #f0fdf4 !important; }
+          .text-green-600 { color: #16a34a !important; }
+          .border-green-100 { border-color: #dcfce7 !important; }
+          .text-center { text-align: center !important; }
+          .justify-center { justify-content: center !important; }
+          .flex-col { flex-direction: column !important; }
+          svg { display: none !important; } /* Hide icons to prevent rendering issues */
+        `;
+        doc.head.appendChild(cleanStyle);
+
+        // Additional safety: Traverse elements and strip any remaining inline oklch
         const elements = doc.getElementsByTagName('*');
         for (let i = 0; i < elements.length; i++) {
           const el = elements[i] as HTMLElement;
-          // Forced override for any potential oklch usage
-          // We target common color properties and forcibly replace oklch strings
-          const style = doc.defaultView?.getComputedStyle(el);
-          if (style) {
-            // Some browsers/libraries crash even reading the property if it contains oklch
-            // So we also check the inline style and the computed style
+          if (el.style) {
             const stylesToClean = ['color', 'backgroundColor', 'borderColor', 'fill', 'stroke', 'outlineColor'];
-
             stylesToClean.forEach(prop => {
-              const val = (style as any)[prop];
-              if (val && typeof val === 'string' && val.includes('oklch')) {
-                // Determine a safe fallback based on the property
-                if (prop === 'backgroundColor') el.style.backgroundColor = '#ffffff';
-                else if (prop === 'borderColor' || prop === 'outlineColor') el.style.borderColor = '#e2e8f0';
-                else el.style.setProperty(prop, '#1e293b', 'important');
+              const inlineVal = el.style.getPropertyValue(prop);
+              if (inlineVal && inlineVal.includes('oklch')) {
+                el.style.removeProperty(prop);
               }
             });
-          }
-
-          // Safety: If Tailwind 4 is injecting oklch via variables, we clear those too
-          if (el.tagName === 'BODY') {
-            el.className = el.className.replace(/\bdark\b/g, ''); // Force light mode
-            el.style.backgroundColor = '#ffffff';
-            el.style.color = '#1e293b';
           }
         }
       }
@@ -58,13 +100,12 @@ export async function exportReportToPDF(reportElement: HTMLElement, reportData: 
     });
 
     const imgWidth = 210; // A4 width in mm
-    const pageHeight = 297; // A4 height in mm (standard A4 is 297)
+    const pageHeight = 297;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
     let heightLeft = imgHeight;
     let position = 0;
 
-    // Add content to PDF, creating new pages if necessary
     pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
     heightLeft -= pageHeight;
 
@@ -84,16 +125,15 @@ export async function exportReportToPDF(reportElement: HTMLElement, reportData: 
       pdf.text(
         `NeuraViva AI Analysis Report • Ref: ${reportData.reportId} • Page ${i} of ${totalPages}`,
         10,
-        290
+        285
       );
       if (reportData.solanaVerificationHash) {
         pdf.setFontSize(6);
-        pdf.text(`Solana Verification: ${reportData.solanaVerificationHash}`, 10, 294);
+        pdf.text(`Solana Verification: ${reportData.solanaVerificationHash}`, 10, 290);
       }
     }
 
     pdf.save(`${reportData.reportId}-analysis-report.pdf`);
-    console.log("PDF export completed successfully");
     return true;
   } catch (error) {
     console.error('CRITICAL: PDF export failed:', error);
