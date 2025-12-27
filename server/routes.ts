@@ -1,10 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import rateLimit from "express-rate-limit"; // Bot protection
-import { storage } from "./storage";
-import { generateDockingReport, categorizeDockingData } from "./gemini";
-import { createVerificationTransaction } from "./solana";
-import { getAgentInsights, getDockingAgent } from "./eliza";
+import { storage } from "./storage.js";
+import { generateDockingReport, categorizeDockingData } from "./gemini.js";
+import { createVerificationTransaction } from "./solana.js";
+import { getAgentInsights, getDockingAgent } from "./eliza.js";
 import {
   insertDockingSimulationSchema,
   insertGeneratedReportSchema,
