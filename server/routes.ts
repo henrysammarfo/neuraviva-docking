@@ -66,14 +66,21 @@ export function registerRoutes(
   );
 
   passport.serializeUser((user: any, done) => {
+    console.log(`[auth] Serializing user: ${user.id}`);
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id: string, done) => {
+  passport.deserializeUser(async (id: any, done) => {
     try {
+      console.log(`[auth] Deserializing user: ${id}`);
       const user = await storage.getUser(id);
+      if (!user) {
+        console.warn(`[auth] No user found during deserialization for ID: ${id}`);
+        return done(null, false);
+      }
       done(null, user);
-    } catch (err) {
+    } catch (err: any) {
+      console.error(`[auth] Deserialization error for ID ${id}:`, err);
       done(err);
     }
   });
@@ -84,6 +91,7 @@ export function registerRoutes(
   // Auth Routes
   app.post("/api/register", async (req, res, next) => {
     try {
+      console.log(`[auth] Attempting registration for: ${req.body.username}`);
       const existingUser = await storage.getUserByUsername(req.body.username);
       if (existingUser) {
         return res.status(400).send("Username already exists");
@@ -103,11 +111,30 @@ export function registerRoutes(
     }
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.json(req.user);
+  app.post("/api/login", (req, res, next) => {
+    console.log(`[auth] Login request received for: ${req.body.username}`);
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      if (err) {
+        console.error("[auth] Passport authenticate error:", err);
+        return next(err);
+      }
+      if (!user) {
+        console.warn("[auth] Login failed:", info?.message || "Unauthorized");
+        return res.status(401).json({ error: "AUTH_FAILED", message: info?.message || "Invalid credentials" });
+      }
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error("[auth] req.login error:", loginErr);
+          return next(loginErr);
+        }
+        console.log(`[auth] Login successful for: ${user.username}`);
+        res.json(user);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {
+    console.log(`[auth] Logout requested for session: ${req.sessionID}`);
     req.logout((err) => {
       if (err) return next(err);
       res.sendStatus(200);

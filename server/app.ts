@@ -64,10 +64,23 @@ app.use((req, res, next) => {
 // This must be synchronous for Vercel to ensure the app is ready for requests
 registerRoutes(httpServer, app);
 
-if (process.env.NODE_ENV === "production" || process.env.VERCEL === "1") {
+if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
   serveStatic(app);
 }
 
+// Global Error Handler for Vercel/Production 500s
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("[app] Global Error Caught:", err);
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+
+  res.status(status).json({
+    error: "SERVER_ERROR",
+    message,
+    detail: err.detail || (process.env.NODE_ENV === "development" ? err.stack : undefined),
+    path: _req.path
+  });
+});
 
 export { app, httpServer, log };
 export default app;
