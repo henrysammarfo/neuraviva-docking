@@ -17,18 +17,18 @@ import { comparePassword } from "./storage";
 import memorystore from "memorystore";
 const MemoryStore = memorystore(session);
 
-export async function registerRoutes(
-  httpServer: Server,
+export function registerRoutes(
+  _httpServer: Server,
   app: Express
-): Promise<Server> {
+): Server | void {
 
   // Anti-Bot & Rate Limiting Middleware
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // Limit each IP to 100 requests per windowMs
     message: "Too many requests from this IP, please try again after 15 minutes",
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    standardHeaders: true,
+    legacyHeaders: false,
   });
 
   // Session Setup
@@ -36,7 +36,7 @@ export async function registerRoutes(
     session({
       cookie: { maxAge: 86400000 },
       store: new MemoryStore({
-        checkPeriod: 86400000 // prune expired entries every 24h
+        checkPeriod: 86400000
       }),
       resave: false,
       saveUninitialized: false,
@@ -77,6 +77,9 @@ export async function registerRoutes(
       done(err);
     }
   });
+
+  // ... (rest of the routes are unchanged until the end)
+
 
   // Auth Routes
   app.post("/api/register", async (req, res, next) => {
@@ -391,15 +394,14 @@ export async function registerRoutes(
     }
   });
 
-  // Start Agent Autonomy
-  const agent = await getAgentInsights(); // Ensure singleton created
-  // In a real app we'd import the instance directly or method, but eliza.ts singleton handling is a bit loose.
-  // We'll fix this by just importing the singleton in routes or modifying logic.
-  // Actually, let's just use the exported singleton access
+  // Start Agent Autonomy (only in non-Vercel environment)
+  if (process.env.VERCEL !== "1") {
+    import("./eliza").then(module => {
+      module.getDockingAgent().then(agent => agent.startPolling(5000));
+    });
+  }
 
-  import("./eliza").then(module => {
-    module.getDockingAgent().then(agent => agent.startPolling(5000));
-  });
-
-  return httpServer;
+  return _httpServer;
 }
+
+

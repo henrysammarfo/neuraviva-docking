@@ -60,21 +60,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Setup the routes and server
-(async () => {
-  await registerRoutes(httpServer, app);
+// Initialize routes and static serving
+registerRoutes(httpServer, app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    res.status(status).json({ message });
-  });
-
-  if (process.env.NODE_ENV === "production" || process.env.VERCEL === "1") {
-    serveStatic(app);
-  }
-})();
+if (process.env.NODE_ENV === "production" || process.env.VERCEL === "1") {
+  serveStatic(app);
+}
 
 export { app, httpServer, log };
 export default app;
+
 
