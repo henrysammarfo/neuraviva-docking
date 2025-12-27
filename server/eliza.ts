@@ -1,5 +1,5 @@
-import { generateDockingReport, categorizeDockingData } from "./gemini";
-import { storage } from "./storage";
+import { generateDockingReport, categorizeDockingData } from "./gemini.js";
+import { storage } from "./storage.js";
 
 // Simplified Eliza Agent for Docking Analysis
 class DockingAgent {

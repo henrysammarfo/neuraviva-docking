@@ -11,7 +11,7 @@ import {
   dockingSimulations,
   generatedReports,
   dataTags
-} from "../shared/schema";
+} from "../shared/schema.js";
 
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, desc, like, or } from "drizzle-orm";
