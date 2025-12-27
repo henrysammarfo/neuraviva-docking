@@ -1,4 +1,4 @@
-import { app, httpServer, log } from "./app.js";
+import { app, httpServer, log } from "./app";
 
 (async () => {
   if (process.env.NODE_ENV !== "production") {

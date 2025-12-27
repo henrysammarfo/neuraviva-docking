@@ -9,7 +9,7 @@ import {
   insertDockingSimulationSchema,
   insertGeneratedReportSchema,
   insertDataTagSchema
-} from "../shared/schema.js";
+} from "../shared/schema";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
