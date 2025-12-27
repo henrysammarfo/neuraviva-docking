@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, ArrowRight } from "lucide-react";
-import heroImage from "@assets/generated_images/3d_molecular_docking_simulation_visualization.png";
+import heroImage from "@assets/molecular_docking_hero.png";
 
 export default function LandingPage() {
     return (

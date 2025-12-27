@@ -193,6 +193,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
 
   // Docking Simulation methods
   getAllSimulations(filters?: { status?: string; search?: string }): Promise<DockingSimulation[]>;
@@ -278,6 +279,16 @@ export class DbStorage implements IStorage {
     this.data.users.push(newUser);
     await this.persist();
     return newUser;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    await this.ensureInit();
+    const index = this.data.users.findIndex(u => u.id === id);
+    if (index === -1) return undefined;
+
+    this.data.users[index] = { ...this.data.users[index], ...updates };
+    await this.persist();
+    return this.data.users[index];
   }
 
 

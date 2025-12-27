@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
-import heroImage from "@assets/generated_images/3d_molecular_docking_simulation_visualization.png";
+import heroImage from "@assets/molecular_docking_hero.png";
 
 export default function AuthPage() {
     const { user, loginMutation, registerMutation } = useAuth();

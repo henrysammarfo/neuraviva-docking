@@ -5,83 +5,112 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 
 const AVATARS = [
-    "marble", "beam", "pixel", "sunset", "bauhaus", "ring"
+    "identicon", "bottts", "avataaars", "pixel-art", "lorelei", "shapes"
 ];
 
 export default function ProfilePage() {
     const { user, logoutMutation } = useAuth();
     const { toast } = useToast();
-    // Note: changing avatars requires a backend mutation which we haven't added yet to storage/routes,
-    // so for this iteration it will verify selection UI but not persist without backend update.
-    // We prioritize the UI flow as requested.
-    const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || "marble");
+    const queryClient = useQueryClient();
+    const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || "identicon");
 
-    const handleSave = () => {
-        // Mock save for now as verified scope was Auth+Profile UI
-        toast({
-            title: "Profile Updated",
-            description: `Avatar set to ${selectedAvatar}. (Persistence pending backend update)`,
-        });
+    const updateProfileMutation = useMutation({
+        mutationFn: async (avatar: string) => {
+            const res = await fetch("/api/user", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ avatar }),
+            });
+            if (!res.ok) throw new Error("Failed to update avatar");
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+            toast({
+                title: "Profile Updated",
+                description: "Your avatar has been updated successfully.",
+            });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Update Failed",
+                description: error.message,
+                variant: "destructive",
+            });
+        },
+    });
+
+    const getAvatarUrl = (style: string, seed: string) => {
+        return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
     };
 
     return (
         <div className="container mx-auto p-8 max-w-2xl">
-            <h1 className="text-3xl font-display font-bold mb-8">User Settings</h1>
+            <h1 className="text-3xl font-display font-bold mb-8 text-foreground tracking-tight">User Settings</h1>
 
-            <Card className="mb-8">
+            <Card className="mb-8 border-border/50 bg-card/50 backdrop-blur-sm">
                 <CardHeader>
-                    <CardTitle>Profile Information</CardTitle>
+                    <CardTitle className="text-lg">Profile Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center gap-4">
-                        <Avatar className="h-20 w-20 border-2 border-primary">
-                            <AvatarImage src={`https://source.boringavatars.com/${selectedAvatar}/120/${user?.username}`} />
+                        <Avatar className="h-20 w-20 border-2 border-primary shadow-[0_0_15px_rgba(var(--primary),0.3)]">
+                            <AvatarImage src={getAvatarUrl(user?.avatar || "identicon", user?.username || "user")} />
                             <AvatarFallback>{user?.username.slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <h3 className="text-xl font-bold">{user?.username}</h3>
-                            <p className="text-muted-foreground">Researcher</p>
+                            <h3 className="text-xl font-bold text-foreground">{user?.username}</h3>
+                            <p className="text-muted-foreground">Lead Researcher</p>
                         </div>
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>User ID</Label>
-                        <div className="p-2 bg-muted rounded font-mono text-sm">{user?.id}</div>
+                        <Label className="text-muted-foreground">User ID</Label>
+                        <div className="p-2 bg-background/50 border border-border/50 rounded font-mono text-xs text-primary">{user?.id}</div>
                     </div>
                 </CardContent>
             </Card>
 
-            <Card className="mb-8">
+            <Card className="mb-8 border-border/50 bg-card/50 backdrop-blur-sm">
                 <CardHeader>
-                    <CardTitle>Customize Avatar</CardTitle>
+                    <CardTitle className="text-lg">Customize Avatar</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-3 gap-4 mb-6">
                         {AVATARS.map((style) => (
                             <div
                                 key={style}
-                                className={`cursor-pointer rounded-lg p-2 border-2 transition-all ${selectedAvatar === style ? "border-primary bg-primary/10" : "border-transparent hover:bg-muted"}`}
+                                className={`cursor-pointer rounded-lg p-3 border-2 transition-all hover:scale-105 ${selectedAvatar === style ? "border-primary bg-primary/10" : "border-border/50 bg-background/30 hover:bg-background/50"}`}
                                 onClick={() => setSelectedAvatar(style)}
                             >
                                 <div className="aspect-square rounded overflow-hidden mb-2">
                                     <img
-                                        src={`https://source.boringavatars.com/${style}/120/${user?.username}`}
+                                        src={getAvatarUrl(style, user?.username || "user")}
                                         alt={style}
                                         className="w-full h-full object-cover"
                                     />
                                 </div>
-                                <p className="text-center text-xs font-medium capitalize">{style}</p>
+                                <p className="text-center text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{style}</p>
                             </div>
                         ))}
                     </div>
-                    <Button onClick={handleSave} className="w-full">Save Changes</Button>
+                    <Button
+                        onClick={() => updateProfileMutation.mutate(selectedAvatar)}
+                        className="w-full shadow-[0_0_20px_rgba(0,255,255,0.2)]"
+                        disabled={updateProfileMutation.isPending || selectedAvatar === user?.avatar}
+                    >
+                        {updateProfileMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Save Changes
+                    </Button>
                 </CardContent>
             </Card>
 
-            <Button variant="destructive" className="w-full" onClick={() => logoutMutation.mutate()}>
-                Logout
+            <Button variant="outline" className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10" onClick={() => logoutMutation.mutate()}>
+                Logout Account
             </Button>
         </div>
     );

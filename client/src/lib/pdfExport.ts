@@ -3,17 +3,22 @@ import html2canvas from 'html2canvas';
 
 export async function exportReportToPDF(reportElement: HTMLElement, reportData: any) {
   try {
-    // Create canvas from the report element
+    console.log("Starting PDF export for report:", reportData.reportId);
+
+    // Ensure styles are applied by waiting a tick
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     const canvas = await html2canvas(reportElement, {
-      scale: 2,
+      scale: 2, // Higher quality
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
+      logging: false,
+      windowWidth: reportElement.scrollWidth,
+      windowHeight: reportElement.scrollHeight
     });
 
     const imgData = canvas.toDataURL('image/png');
-
-    // Create PDF
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -21,50 +26,45 @@ export async function exportReportToPDF(reportElement: HTMLElement, reportData: 
     });
 
     const imgWidth = 210; // A4 width in mm
-    const pageHeight = 295; // A4 height in mm
+    const pageHeight = 297; // A4 height in mm (standard A4 is 297)
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
 
+    let heightLeft = imgHeight;
     let position = 0;
 
-    // Add first page
+    // Add content to PDF, creating new pages if necessary
     pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
     heightLeft -= pageHeight;
 
-    // Add additional pages if needed
-    while (heightLeft >= 0) {
+    while (heightLeft > 0) {
       position = heightLeft - imgHeight;
       pdf.addPage();
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
     }
 
-    // Add footer with verification info
-    const pageCount = pdf.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
+    // Add footer to all pages
+    const totalPages = pdf.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
       pdf.setPage(i);
       pdf.setFontSize(8);
-      pdf.setTextColor(128, 128, 128);
+      pdf.setTextColor(150, 150, 150);
       pdf.text(
-        `NeuraViva Research - Confidential & Proprietary`,
+        `NeuraViva AI Analysis Report • Ref: ${reportData.reportId} • Page ${i} of ${totalPages}`,
         10,
-        pageHeight - 10
+        290
       );
       if (reportData.solanaVerificationHash) {
-        pdf.text(
-          `Solana Verification: ${reportData.solanaVerificationHash.substring(0, 20)}...`,
-          10,
-          pageHeight - 5
-        );
+        pdf.setFontSize(6);
+        pdf.text(`Solana Verification: ${reportData.solanaVerificationHash}`, 10, 294);
       }
     }
 
-    // Save the PDF
     pdf.save(`${reportData.reportId}-analysis-report.pdf`);
-
+    console.log("PDF export completed successfully");
     return true;
   } catch (error) {
-    console.error('PDF export failed:', error);
+    console.error('CRITICAL: PDF export failed:', error);
     return false;
   }
 }

@@ -2,22 +2,16 @@ import { motion } from "framer-motion";
 import { ArrowRight, Dna, Activity, Zap, FileJson, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import moleculeImage from "@assets/generated_images/3d_molecular_docking_simulation_visualization.png";
+import moleculeImage from "@assets/molecular_docking_hero.png";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const data = [
-  { name: '00:00', value: 2400 },
-  { name: '04:00', value: 1398 },
-  { name: '08:00', value: 9800 },
-  { name: '12:00', value: 3908 },
-  { name: '16:00', value: 4800 },
-  { name: '20:00', value: 3800 },
-  { name: '24:00', value: 4300 },
-];
+import { NewSimulationDialog } from "@/components/layout/NewSimulationDialog";
+import { useMemo } from "react";
 
 export default function Dashboard() {
+  const { toast } = useToast();
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['/api/stats'],
     queryFn: async () => {
@@ -25,7 +19,7 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Failed to fetch stats');
       return res.json();
     },
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchInterval: 5000, // Auto-refresh every 5 seconds for real-time feel
   });
 
   const { data: simulations, isLoading: simsLoading } = useQuery({
@@ -35,7 +29,7 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Failed to fetch simulations');
       return res.json();
     },
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchInterval: 5000, // Auto-refresh every 5 seconds
   });
 
   const { data: agentInsights, isLoading: insightsLoading } = useQuery({
@@ -45,10 +39,29 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Failed to fetch agent insights');
       return res.json();
     },
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchInterval: 5000, // Auto-refresh every 5 seconds
   });
 
-  const recentSimulations = simulations?.slice(0, 3) || [];
+  const recentSimulations = simulations?.slice(0, 5) || [];
+
+  // Calculate dynamic trends based on simulation data
+  const trends = useMemo(() => {
+    if (!simulations || simulations.length === 0) {
+      return { active: "--", success: "--", compute: "Online", total: "0" };
+    }
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const recentCount = simulations.filter((s: any) => new Date(s.createdAt) > oneHourAgo).length;
+    const analyzedCount = simulations.filter((s: any) => s.status === 'analyzed').length;
+    const successPct = simulations.length > 0 ? Math.round((analyzedCount / simulations.length) * 100) : 0;
+
+    return {
+      active: recentCount > 0 ? `+${recentCount} new` : "Idle",
+      success: `${successPct}%`,
+      compute: stats?.computeNodes > 120 ? "High Load" : "Normal",
+      total: `+${recentCount} today`
+    };
+  }, [simulations, stats]);
 
   return (
     <div className="space-y-8">
@@ -58,11 +71,23 @@ export default function Dashboard() {
           <p className="text-muted-foreground">Real-time overview of molecular docking simulations.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-border/50">Export Data</Button>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_20px_rgba(0,255,255,0.3)]">
-            <Zap className="w-4 h-4 mr-2" />
-            New Simulation
+          <Button
+            variant="outline"
+            className="border-border/50"
+            onClick={() => {
+              const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(simulations, null, 2));
+              const downloadAnchorNode = document.createElement('a');
+              downloadAnchorNode.setAttribute("href", dataStr);
+              downloadAnchorNode.setAttribute("download", "docking_data_export.json");
+              document.body.appendChild(downloadAnchorNode);
+              downloadAnchorNode.click();
+              downloadAnchorNode.remove();
+              toast({ title: "Export Started", description: "Your data is being exported as JSON." });
+            }}
+          >
+            Export Data
           </Button>
+          <NewSimulationDialog />
         </div>
       </div>
 
@@ -80,10 +105,10 @@ export default function Dashboard() {
             ))
           ) : (
             [
-              { label: "Active Simulations", value: stats?.activeSimulations || 0, icon: Activity, trend: "+2.5%", color: "text-primary" },
-              { label: "Binding Success Rate", value: stats?.successRate || "0%", icon: CheckCircle2, trend: "+5.1%", color: "text-green-400" },
-              { label: "Compute Nodes", value: stats?.computeNodes || 148, icon: Cpu, trend: "Stable", color: "text-purple-400" },
-              { label: "Total Simulations", value: stats?.totalSimulations || 0, icon: FileJson, trend: `+${stats?.activeSimulations || 0}`, color: "text-orange-400" },
+              { label: "Active Simulations", value: stats?.activeSimulations || 0, icon: Activity, trend: trends.active, color: "text-primary" },
+              { label: "Binding Success Rate", value: stats?.successRate || "0%", icon: CheckCircle2, trend: trends.success, color: "text-green-400" },
+              { label: "Compute Nodes", value: stats?.computeNodes || 0, icon: Cpu, trend: trends.compute, color: "text-purple-400" },
+              { label: "Total Simulations", value: stats?.totalSimulations || 0, icon: FileJson, trend: trends.total, color: "text-orange-400" },
             ].map((metric, i) => (
               <motion.div
                 key={metric.label}
@@ -194,7 +219,7 @@ export default function Dashboard() {
             <CardTitle className="text-lg font-medium">Recent Simulations</CardTitle>
             <CardDescription>Latest docking jobs submitted to the Solana grid.</CardDescription>
           </div>
-          <Button variant="ghost" className="text-xs">View All <ArrowRight className="w-3 h-3 ml-1" /></Button>
+          <Button variant="ghost" className="text-xs" onClick={() => window.location.href = '/explorer'}>View All <ArrowRight className="w-3 h-3 ml-1" /></Button>
         </CardHeader>
         <CardContent>
           {simsLoading ? (

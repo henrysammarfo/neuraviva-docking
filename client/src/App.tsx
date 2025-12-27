@@ -12,6 +12,7 @@ import ProfilePage from "@/pages/profile-page";
 import LandingPage from "@/pages/landing-page";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import Sidebar from "@/components/layout/Sidebar";
+import { AppWalletProvider } from "@/contexts/WalletContext";
 import { Loader2 } from "lucide-react";
 
 // Wrapper for protected routes to handle auth check
@@ -70,12 +71,14 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <Router />
-          <Toaster />
-        </AuthProvider>
-      </TooltipProvider>
+      <AppWalletProvider>
+        <TooltipProvider>
+          <AuthProvider>
+            <Router />
+            <Toaster />
+          </AuthProvider>
+        </TooltipProvider>
+      </AppWalletProvider>
     </QueryClientProvider>
   );
 }

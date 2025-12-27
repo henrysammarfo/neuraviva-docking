@@ -75,7 +75,7 @@ class DockingAgent {
 
   async startPolling(intervalMs: number = 10000) {
     if (this.isPolling) return;
-    
+
     console.log("🚀 Agent starting background polling...");
     this.isPolling = true;
 
@@ -107,10 +107,10 @@ class DockingAgent {
     if (pending) {
       console.log(`🤖 Agent found pending simulation: ${pending.proteinTarget} (${pending.id})`);
       await this.updateSimulationStatus(pending.id, "processing");
-      
+
       // Simulate processing time for "Agent" feel
       await new Promise(resolve => setTimeout(resolve, 3000));
-      
+
       await this.processSimulation(pending.id);
     }
   }
@@ -125,27 +125,78 @@ class DockingAgent {
       const simulations = await storage.getAllSimulations();
       const reports = await storage.getAllReports();
 
-      // Generate insights
-      const insights = {
-        totalSimulations: simulations.length,
-        successRate: `${((simulations.filter(s => s.status === "analyzed").length / simulations.length) * 100).toFixed(1)}%`,
-        averageBindingAffinity: simulations.reduce((sum, sim) => sum + sim.bindingAffinity, 0) / simulations.length,
-        proteinTargets: Array.from(new Set(simulations.map(s => s.proteinTarget))),
-        therapeuticAreas: Array.from(new Set(simulations.map(s => s.proteinTarget).map(target => {
-          // Simple mapping - in production this would be more sophisticated
-          if (target.includes("EGFR") || target.includes("JAK")) return "Oncology";
-          if (target.includes("SARS")) return "Antiviral";
-          if (target.includes("HSP")) return "Cancer";
-          return "Other";
-        }))),
-        recommendations: [
-          "Focus on EGFR-TK inhibitors showing strong binding affinities",
-          "Investigate SARS-CoV-2 Mpro for antiviral drug development",
-          "Consider combination therapies targeting multiple pathways"
-        ]
-      };
+      // Handle empty data gracefully
+      if (simulations.length === 0) {
+        return {
+          totalSimulations: 0,
+          successRate: "0%",
+          averageBindingAffinity: 0,
+          proteinTargets: [],
+          therapeuticAreas: [],
+          recommendations: [
+            "No simulations yet. Submit your first docking job to get started!",
+            "Use the 'New Simulation' button to add protein-ligand docking data.",
+            "The AI agent will automatically analyze your submissions."
+          ],
+          recentActivity: "Waiting for data..."
+        };
+      }
 
-      return insights;
+      const analyzedCount = simulations.filter(s => s.status === "analyzed").length;
+      const processingCount = simulations.filter(s => s.status === "processing").length;
+      const avgAffinity = simulations.reduce((sum, sim) => sum + sim.bindingAffinity, 0) / simulations.length;
+
+      // Get unique protein targets
+      const proteinTargets = Array.from(new Set(simulations.map(s => s.proteinTarget)));
+
+      // Map to therapeutic areas
+      const therapeuticAreas = Array.from(new Set(proteinTargets.map(target => {
+        if (target.includes("EGFR") || target.includes("JAK") || target.includes("kinase")) return "Oncology";
+        if (target.includes("SARS") || target.includes("viral") || target.includes("protease")) return "Antiviral";
+        if (target.includes("HSP") || target.includes("heat")) return "Cancer";
+        if (target.includes("ACE") || target.includes("cardio")) return "Cardiovascular";
+        return "General Research";
+      })));
+
+      // Generate DYNAMIC recommendations based on actual data
+      const recommendations: string[] = [];
+
+      // Best performing simulation
+      const bestSim = simulations.reduce((best, curr) =>
+        curr.bindingAffinity < best.bindingAffinity ? curr : best, simulations[0]);
+      recommendations.push(`Strong binding detected: ${bestSim.proteinTarget} with ${bestSim.ligandName} (${bestSim.bindingAffinity} kcal/mol)`);
+
+      // Processing status
+      if (processingCount > 0) {
+        recommendations.push(`${processingCount} simulation(s) currently being processed by the AI agent.`);
+      }
+
+      // Success rate insight
+      if (analyzedCount > 0) {
+        recommendations.push(`${analyzedCount} of ${simulations.length} simulations fully analyzed (${Math.round(analyzedCount / simulations.length * 100)}% complete).`);
+      }
+
+      // Most researched target
+      const targetCounts = simulations.reduce((acc, s) => {
+        acc[s.proteinTarget] = (acc[s.proteinTarget] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      const topTarget = Object.entries(targetCounts).sort((a, b) => b[1] - a[1])[0];
+      if (topTarget) {
+        recommendations.push(`Most studied target: ${topTarget[0]} with ${topTarget[1]} simulation(s).`);
+      }
+
+      return {
+        totalSimulations: simulations.length,
+        successRate: `${Math.round((analyzedCount / simulations.length) * 100)}%`,
+        averageBindingAffinity: avgAffinity.toFixed(2),
+        proteinTargets,
+        therapeuticAreas,
+        recommendations,
+        recentActivity: simulations.length > 0
+          ? `Last activity: ${new Date(simulations[0].createdAt).toLocaleString()}`
+          : "No recent activity"
+      };
     } catch (error: any) {
       return { error: error.message };
     }

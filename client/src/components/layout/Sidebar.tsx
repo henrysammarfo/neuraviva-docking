@@ -16,7 +16,7 @@ import { useState } from "react";
 
 export default function Sidebar() {
     const [location] = useLocation();
-    const { logoutMutation } = useAuth();
+    const { user, logoutMutation } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
 
     const NavItem = ({ href, icon: Icon, label }: { href: string; icon: any; label: string }) => (
@@ -52,6 +52,23 @@ export default function Sidebar() {
                 <NavItem href="/profile" icon={User} label="Profile" />
             </nav>
 
+            {/* User Avatar Section */}
+            {user && (
+                <div className="px-4 py-3 border-t border-border/50">
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-secondary/5">
+                        <img
+                            src={`https://api.dicebear.com/7.x/${user.avatar || 'identicon'}/svg?seed=${user.username}`}
+                            alt="Avatar"
+                            className="w-10 h-10 rounded-full border-2 border-primary/50"
+                        />
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{user.username}</p>
+                            <p className="text-xs text-muted-foreground">Researcher</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="p-4 border-t border-border/50">
                 <Button
                     variant="outline"
@@ -68,7 +85,9 @@ export default function Sidebar() {
     return (
         <>
             {/* Desktop Sidebar */}
-            <aside className="hidden md:flex w-64 flex-col border-r border-border/50 bg-card">
+            <aside className="hidden md:flex w-64 flex-col border-r border-border/50 bg-card/80 backdrop-blur-xl relative">
+                <div className="absolute inset-y-0 right-0 w-[1px] bg-gradient-to-b from-transparent via-primary/50 to-transparent opacity-50" />
+                <div className="absolute inset-0 bg-primary/5 pointer-events-none" />
                 <Navigation />
             </aside>
 

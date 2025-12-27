@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { Share2, Download, ChevronRight, Loader2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Share2, Download, ChevronRight, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import moleculeImage from "@assets/generated_images/3d_molecular_docking_simulation_visualization.png";
+import moleculeImage from "@assets/molecular_docking_hero.png";
 import { exportReportToPDF } from "@/lib/pdfExport";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import {
   RadarChart,
   PolarGrid,
@@ -28,6 +29,10 @@ const performanceData = [
 
 export default function Reports() {
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const reportContentRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: reports, isLoading: reportsLoading } = useQuery({
     queryKey: ['/api/reports'],
@@ -46,6 +51,22 @@ export default function Reports() {
   if (!selectedReportId && reports && reports.length > 0) {
     setSelectedReportId(reports[0].id);
   }
+
+  const deleteReportMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/reports/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete report');
+      return true;
+    },
+    onSuccess: () => {
+      toast({ title: "Report Deleted", description: "The report has been removed." });
+      queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
+      setSelectedReportId(null);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  });
 
   // Get simulation data for the selected report
   const { data: simulation } = useQuery({
@@ -98,8 +119,8 @@ export default function Reports() {
                     key={report.id}
                     onClick={() => setSelectedReportId(report.id)}
                     className={`p-3 rounded-lg border cursor-pointer transition-all ${selectedReport?.id === report.id
-                        ? "bg-primary/10 border-primary/50 shadow-[0_0_10px_rgba(var(--primary),0.1)]"
-                        : "bg-card border-border/50 hover:bg-secondary/5 hover:border-border"
+                      ? "bg-primary/10 border-primary/50 shadow-[0_0_10px_rgba(var(--primary),0.1)]"
+                      : "bg-card border-border/50 hover:bg-secondary/5 hover:border-border"
                       }`}
                   >
                     <div className="flex justify-between items-start mb-1">
@@ -114,6 +135,19 @@ export default function Reports() {
                       {report.solanaVerificationHash && (
                         <Badge variant="default" className="text-[10px] h-5 bg-secondary text-secondary-foreground">Verified</Badge>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 text-red-500 hover:text-red-600 hover:bg-red-500/10 ml-auto"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Delete this report?")) {
+                            deleteReportMutation.mutate(report.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -141,14 +175,29 @@ export default function Reports() {
                 <Share2 className="w-4 h-4" /> Share
               </Button>
               <Button size="sm" className="gap-2 bg-primary text-primary-foreground"
+                disabled={isExporting}
                 onClick={async () => {
-                  const reportElement = document.querySelector('.bg-white.text-slate-900') as HTMLElement;
-                  if (reportElement && selectedReport) {
-                    await exportReportToPDF(reportElement, selectedReport);
+                  if (reportContentRef.current && selectedReport) {
+                    setIsExporting(true);
+                    try {
+                      const success = await exportReportToPDF(reportContentRef.current, selectedReport);
+                      if (success) {
+                        toast({ title: "PDF Downloaded", description: "Report saved successfully." });
+                      } else {
+                        toast({ title: "Export Failed", description: "Could not generate PDF. Check console for details.", variant: "destructive" });
+                      }
+                    } catch (err) {
+                      toast({ title: "Export Error", description: "An unexpected error occurred.", variant: "destructive" });
+                    } finally {
+                      setIsExporting(false);
+                    }
+                  } else {
+                    toast({ title: "No Report Selected", description: "Please select a report first.", variant: "destructive" });
                   }
                 }}
               >
-                <Download className="w-4 h-4" /> Download PDF
+                {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {isExporting ? 'Exporting...' : 'Download PDF'}
               </Button>
             </div>
           )}
@@ -165,7 +214,7 @@ export default function Reports() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 bg-white text-slate-900 rounded-lg overflow-hidden shadow-2xl overflow-y-auto">
+          <div ref={reportContentRef} className="flex-1 bg-white text-slate-900 rounded-lg overflow-hidden shadow-2xl overflow-y-auto">
             <div className="max-w-4xl mx-auto p-12 space-y-8">
               {/* Report Header */}
               <div className="flex justify-between items-end border-b border-slate-200 pb-6">

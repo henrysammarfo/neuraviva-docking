@@ -59,7 +59,7 @@
 
 /* Sci-Fi Bio-Tech Dark Mode */
 :root {
-  --background: 224 71% 4%;     /* Very dark blue, almost black */
+  --background: 224 80% 6%;     /* Slightly more blue and vivid */
   --foreground: 210 40% 98%;    /* Off-white */
 
   --card: 224 71% 6%;           /* Slightly lighter than bg */

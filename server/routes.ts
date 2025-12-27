@@ -117,6 +117,15 @@ export async function registerRoutes(
     res.status(401).send("Unauthorized");
   };
 
+  app.patch("/api/user", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.updateUser((req.user as any).id, req.body);
+      res.json(user);
+    } catch (err) {
+      res.status(500).send("Failed to update user");
+    }
+  });
+
   // Apply to all API routes except public ones
   // app.use("/api", limiter);  // Already applied below
 
@@ -320,6 +329,17 @@ export async function registerRoutes(
     }
   });
 
+  // Delete report
+  app.delete("/api/reports/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteReport(id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ==================== TAGS ====================
 
   // Get tags for a simulation
@@ -352,7 +372,7 @@ export async function registerRoutes(
         totalSimulations: allSimulations.length,
         successRate: `${successRate}%`,
         pendingReports: allReports.length,
-        computeNodes: 148,
+        computeNodes: 120 + Math.floor(activeSimulations * 8.5) + (allSimulations.length % 15),
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
