@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Share2, Download, ChevronRight, Loader2, Trash2 } from "lucide-react";
+import { Share2, Download, ChevronRight, Loader2, Trash2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -303,21 +303,32 @@ export default function Reports() {
                 </div>
               </section>
 
-              <div className="pt-8 border-t border-slate-100 text-center text-xs text-slate-400">
-                <p>Confidential & Proprietary • NeuraViva Research • Generated via Solana Blockchain Verification</p>
+              <div className="pt-8 border-t border-slate-100 space-y-4">
+                <div className="flex flex-col items-center justify-center space-y-2 text-center">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-600 border border-green-100 text-[10px] font-bold uppercase tracking-wider">
+                    <CheckCircle2 className="w-3 h-3" /> NeuraViva Verified
+                  </div>
+                  <p className="text-[10px] text-slate-400 max-w-sm">
+                    This document is cryptographically hashed and anchored to the Solana Blockchain for immutable provenance and research integrity.
+                  </p>
+                </div>
+
                 {selectedReport.solanaVerificationHash && (
-                  <p className="mt-1 font-mono">
-                    Hash:
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-col items-center">
+                    <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest mb-1">Blockchain Receipt</span>
                     <a
                       href={`https://explorer.solana.com/tx/${selectedReport.solanaVerificationHash}?cluster=devnet`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-1 text-primary hover:underline"
+                      className="font-mono text-[10px] text-primary hover:text-primary/80 break-all text-center leading-relaxed"
                     >
                       {selectedReport.solanaVerificationHash}
                     </a>
-                  </p>
+                  </div>
                 )}
+                <div className="text-center text-[9px] text-slate-300">
+                  © {new Date().getFullYear()} NeuraViva AI • Research Analytics Platform
+                </div>
               </div>
             </div>
           </div>

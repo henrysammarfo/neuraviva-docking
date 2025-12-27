@@ -187,7 +187,15 @@ export class DbStorage implements IStorage {
   }
 
   async deleteSimulation(id: number): Promise<void> {
-    await db.delete(dockingSimulations).where(eq(dockingSimulations.id, id));
+    try {
+      // Manual cascade (in case DB constraints are not set to CASCADE)
+      await db.delete(dataTags).where(eq(dataTags.simulationId, id));
+      await db.delete(generatedReports).where(eq(generatedReports.simulationId, id));
+      await db.delete(dockingSimulations).where(eq(dockingSimulations.id, id));
+    } catch (error: any) {
+      console.error(`[storage] Error deleting simulation ${id}:`, error);
+      throw error;
+    }
   }
 
   // Report methods

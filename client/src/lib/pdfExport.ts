@@ -15,7 +15,24 @@ export async function exportReportToPDF(reportElement: HTMLElement, reportData: 
       backgroundColor: '#ffffff',
       logging: false,
       windowWidth: reportElement.scrollWidth,
-      windowHeight: reportElement.scrollHeight
+      windowHeight: reportElement.scrollHeight,
+      onclone: (doc) => {
+        // Find all elements in the cloned document
+        const elements = doc.getElementsByTagName('*');
+        for (let i = 0; i < elements.length; i++) {
+          const el = elements[i] as HTMLElement;
+          // Forced override for any potential oklch usage
+          // We target common color properties
+          const style = doc.defaultView?.getComputedStyle(el);
+          if (style) {
+            if (style.color.includes('oklch')) el.style.color = '#1e293b';
+            if (style.backgroundColor.includes('oklch')) el.style.backgroundColor = '#ffffff';
+            if (style.borderColor.includes('oklch')) el.style.borderColor = '#e2e8f0';
+            if (style.fill.includes('oklch')) el.style.fill = '#1e293b';
+            if (style.stroke.includes('oklch')) el.style.stroke = '#1e293b';
+          }
+        }
+      }
     });
 
     const imgData = canvas.toDataURL('image/png');
