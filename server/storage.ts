@@ -129,8 +129,21 @@ export class DbStorage implements IStorage {
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const result = await db.update(users).set(updates).where(eq(users.id, id)).returning();
-    return result[0];
+    try {
+      // Remove sensitive or non-updatable fields if they exist in updates
+      const updatable = { ...updates };
+      delete (updatable as any).id;
+      delete (updatable as any).password;
+      delete (updatable as any).username;
+      delete (updatable as any).createdAt;
+
+      console.log(`[storage] Updating user ${id} with:`, updatable);
+      const result = await db.update(users).set(updatable).where(eq(users.id, id)).returning();
+      return result[0];
+    } catch (error: any) {
+      console.error(`[storage] Error updating user ${id}:`, error);
+      throw error;
+    }
   }
 
   // Simulation methods

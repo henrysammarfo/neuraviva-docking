@@ -154,10 +154,24 @@ export function registerRoutes(
 
   app.patch("/api/user", isAuthenticated, async (req, res) => {
     try {
+      console.log(`[auth] Profile update request for user: ${(req.user as any).username} (ID: ${(req.user as any).id})`);
+      console.log(`[auth] Update body: ${JSON.stringify(req.body)}`);
+
       const user = await storage.updateUser((req.user as any).id, req.body);
+      if (!user) {
+        console.warn(`[auth] No user returned after update for ID: ${(req.user as any).id}`);
+        return res.status(404).json({ error: "USER_NOT_FOUND", message: "User not found for update" });
+      }
+
+      console.log(`[auth] Profile updated successfully for: ${user.username}`);
       res.json(user);
-    } catch (err) {
-      res.status(500).send("Failed to update user");
+    } catch (err: any) {
+      console.error("[auth] Profile update failed:", err);
+      res.status(500).json({
+        error: "UPDATE_FAILED",
+        message: err.message,
+        detail: err.detail || "Database update failed."
+      });
     }
   });
 
