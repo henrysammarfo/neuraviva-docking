@@ -4,7 +4,7 @@ import rateLimit from "express-rate-limit"; // Bot protection
 import { storage } from "./storage";
 import { generateDockingReport, categorizeDockingData } from "./gemini";
 import { createVerificationTransaction } from "./solana";
-import { getAgentInsights } from "./eliza";
+import { getAgentInsights, getDockingAgent } from "./eliza";
 import {
   insertDockingSimulationSchema,
   insertGeneratedReportSchema,
@@ -192,6 +192,15 @@ export function registerRoutes(
         }
       } catch (aiError) {
         console.error("AI categorization failed:", aiError);
+      }
+
+      // Trigger Agent Autonomy immediately for Vercel (simulating live background processing)
+      if (process.env.VERCEL === "1") {
+        const agent = await getDockingAgent();
+        // Fire and forget, or process in "background"
+        agent.processSimulation(simulation.id).catch(err => {
+          console.error("Agent background processing failed:", err);
+        });
       }
 
       res.status(201).json(simulation);
@@ -396,9 +405,7 @@ export function registerRoutes(
 
   // Start Agent Autonomy (only in non-Vercel environment)
   if (process.env.VERCEL !== "1") {
-    import("./eliza").then(module => {
-      module.getDockingAgent().then(agent => agent.startPolling(5000));
-    });
+    getDockingAgent().then(agent => agent.startPolling(10000));
   }
 
   return _httpServer;

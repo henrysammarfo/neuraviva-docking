@@ -61,11 +61,13 @@ app.use((req, res, next) => {
 });
 
 // Initialize routes and static serving
+// This must be synchronous for Vercel to ensure the app is ready for requests
 registerRoutes(httpServer, app);
 
 if (process.env.NODE_ENV === "production" || process.env.VERCEL === "1") {
   serveStatic(app);
 }
+
 
 export { app, httpServer, log };
 export default app;

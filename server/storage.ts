@@ -36,12 +36,19 @@ export async function comparePassword(password: string, hash: string): Promise<b
 }
 
 // Database connection
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString && process.env.NODE_ENV === "production") {
+  console.warn("⚠️ DATABASE_URL is not set in production. Database operations will fail.");
+}
+
 const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: connectionString || "",
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
 });
 
 const db = drizzle(pool);
+
 
 export interface IStorage {
   // User methods
