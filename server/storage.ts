@@ -47,7 +47,7 @@ if (!connectionString && (process.env.NODE_ENV === "production" || process.env.V
   }
 }
 
-const pool = new pg.Pool({
+export const pool = new pg.Pool({
   connectionString: connectionString || "",
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
 });

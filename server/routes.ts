@@ -13,9 +13,10 @@ import {
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
-import { comparePassword } from "./storage.js";
-import memorystore from "memorystore";
-const MemoryStore = memorystore(session);
+import { comparePassword, pool } from "./storage.js";
+import connectPgSimple from "connect-pg-simple";
+
+const PostgresStore = connectPgSimple(session);
 
 export function registerRoutes(
   _httpServer: Server,
@@ -34,9 +35,15 @@ export function registerRoutes(
   // Session Setup
   app.use(
     session({
-      cookie: { maxAge: 86400000 },
-      store: new MemoryStore({
-        checkPeriod: 86400000
+      cookie: {
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax"
+      },
+      store: new PostgresStore({
+        pool,
+        tableName: "session",
+        createTableIfMissing: false, // We'll push it via drizzle
       }),
       resave: false,
       saveUninitialized: false,
