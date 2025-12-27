@@ -13,7 +13,7 @@ import {
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
-import { comparePassword } from "./storage";
+import { comparePassword } from "./storage.js";
 import memorystore from "memorystore";
 const MemoryStore = memorystore(session);
 
