@@ -248,7 +248,7 @@ export function registerRoutes(
       }
 
       // Trigger Agent Autonomy immediately for Vercel (simulating live background processing)
-      if (process.env.VERCEL === "1") {
+      if (process.env.VERCEL) {
         const agent = await getDockingAgent();
         // Fire and forget, or process in "background"
         agent.processSimulation(simulation.id).catch(err => {
@@ -457,7 +457,7 @@ export function registerRoutes(
   });
 
   // Start Agent Autonomy (only in non-Vercel environment)
-  if (process.env.VERCEL !== "1") {
+  if (!process.env.VERCEL) {
     getDockingAgent().then(agent => agent.startPolling(10000));
   }
 
