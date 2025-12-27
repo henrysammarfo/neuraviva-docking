@@ -4,7 +4,7 @@ import path from "path";
 
 export function serveStatic(app: Express) {
   const root = process.cwd();
-  const distPath = path.resolve(root, "public");
+  const distPath = path.resolve(root, "dist");
 
   console.log(`[static] Runtime root: ${root}`);
   console.log(`[static] Looking for assets at: ${distPath}`);
