@@ -109,8 +109,8 @@ export const AppWalletProvider: React.FC<AppWalletProviderProps> = ({ children }
   const endpoint = clusterApiUrl(network);
 
   const wallets = [
-    new PhantomWalletAdapter(),
-    new SolflareWalletAdapter({ network }),
+    // Phantom and Solflare are now registered as Standard Wallets
+    // and don't need explicit adapters anymore, which removes console noise.
     new TorusWalletAdapter(),
   ];
 

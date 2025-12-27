@@ -93,8 +93,13 @@ export function registerRoutes(
         if (err) return next(err);
         res.status(201).json(user);
       });
-    } catch (err) {
-      next(err);
+    } catch (err: any) {
+      console.error(`[auth] Registration failed for ${req.body.username}:`, err);
+      res.status(500).json({
+        error: "REGISTRATION_FAILED",
+        message: err.message,
+        detail: err.detail || "Check server logs for DB connectivity."
+      });
     }
   });
 

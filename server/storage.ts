@@ -47,6 +47,13 @@ const pool = new pg.Pool({
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
 });
 
+// Production DB Observability
+console.log(`[storage] Initializing DB Pool. Connection string present: ${!!connectionString}`);
+if (connectionString) {
+  const redacted = connectionString.replace(/:([^@]+)@/, ":****@");
+  console.log(`[storage] DB Endpoint: ${redacted.split('@')[1] || 'parse_fail'}`);
+}
+
 const db = drizzle(pool);
 
 
