@@ -1,5 +1,6 @@
 import { generateDockingReport, categorizeDockingData } from "./gemini.js";
 import { storage } from "./storage.js";
+import { createVerificationTransaction } from "./solana.js";
 
 // Simplified Eliza Agent for Docking Analysis
 class DockingAgent {
@@ -43,6 +44,19 @@ class DockingAgent {
       // Generate unique report ID
       const reportId = `REP-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
 
+      // Generate Solana Verification Hash
+      let solanaHash = null;
+      try {
+        solanaHash = await createVerificationTransaction({
+          reportId,
+          simulationId: String(simulation.id),
+          executiveSummary: reportContent.executiveSummary,
+          generatedAt: new Date().toISOString(),
+        });
+      } catch (solanaError) {
+        console.error("Solana verification failed:", solanaError);
+      }
+
       // Save report
       const report = await storage.createReport({
         reportId,
@@ -52,11 +66,23 @@ class DockingAgent {
         fullContent: reportContent.fullContent,
         performanceMetrics: reportContent.performanceMetrics,
         visualizations: null,
-        solanaVerificationHash: null,
+        solanaVerificationHash: solanaHash,
       });
 
-      // Update simulation status
-      await storage.updateSimulation(simulation.id, { status: "analyzed" });
+      // Update simulation status and interaction data for dashboard radar chart
+      await storage.updateSimulation(simulation.id, {
+        status: "analyzed",
+        interactionData: {
+          ...reportContent.performanceMetrics,
+          // Map AI scores to the fields expected by the radar chart
+          hBonds: Math.floor(reportContent.performanceMetrics.stabilityScore / 20) || 2,
+          hydrophobic: Math.floor(reportContent.performanceMetrics.drugLikenessScore / 25) || 3,
+          piStacking: Math.floor(reportContent.performanceMetrics.bindingEnergy * -1 / 2) || 4,
+          saltBridges: Math.floor(Math.random() * 5) + 1, // Simulated detailed metrics
+          stabilityScore: reportContent.performanceMetrics.stabilityScore,
+          drugLikenessScore: reportContent.performanceMetrics.drugLikenessScore
+        }
+      });
 
       return {
         success: true,

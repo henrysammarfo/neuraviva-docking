@@ -59,25 +59,31 @@
 
 /* Sci-Fi Bio-Tech Dark Mode */
 :root {
-  --background: 224 80% 6%;     /* Slightly more blue and vivid */
-  --foreground: 210 40% 98%;    /* Off-white */
+  --background: 224 80% 6%;
+  /* Slightly more blue and vivid */
+  --foreground: 210 40% 98%;
+  /* Off-white */
 
-  --card: 224 71% 6%;           /* Slightly lighter than bg */
+  --card: 224 71% 6%;
+  /* Slightly lighter than bg */
   --card-foreground: 210 40% 98%;
 
   --popover: 224 71% 6%;
   --popover-foreground: 210 40% 98%;
 
-  --primary: 180 100% 50%;      /* Electric Cyan */
+  --primary: 180 100% 50%;
+  /* Electric Cyan */
   --primary-foreground: 224 71% 4%;
 
-  --secondary: 260 100% 65%;    /* Vivid Purple (Solana-ish) */
+  --secondary: 260 100% 65%;
+  /* Vivid Purple (Solana-ish) */
   --secondary-foreground: 210 40% 98%;
 
   --muted: 215 28% 17%;
   --muted-foreground: 215 20% 65%;
 
-  --accent: 180 100% 50%;       /* Cyan accent for hover states */
+  --accent: 180 100% 50%;
+  /* Cyan accent for hover states */
   --accent-foreground: 224 71% 4%;
 
   --destructive: 0 63% 31%;
@@ -89,11 +95,16 @@
 
   --radius: 0.5rem;
 
-  --chart-1: 180 100% 50%;      /* Cyan */
-  --chart-2: 260 100% 65%;      /* Purple */
-  --chart-3: 300 100% 60%;      /* Magenta */
-  --chart-4: 210 100% 60%;      /* Blue */
-  --chart-5: 150 100% 50%;      /* Green */
+  --chart-1: 180 100% 50%;
+  /* Cyan */
+  --chart-2: 260 100% 65%;
+  /* Purple */
+  --chart-3: 300 100% 60%;
+  /* Magenta */
+  --chart-4: 210 100% 60%;
+  /* Blue */
+  --chart-5: 150 100% 50%;
+  /* Green */
 
   --sidebar: 224 71% 5%;
   --sidebar-foreground: 240 5% 96%;
@@ -109,13 +120,20 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
     background-image: radial-gradient(circle at 50% 0%, hsl(260 100% 65% / 0.1), transparent 40%),
-                      radial-gradient(circle at 100% 0%, hsl(180 100% 50% / 0.05), transparent 30%);
+      radial-gradient(circle at 100% 0%, hsl(180 100% 50% / 0.05), transparent 30%);
     background-attachment: fixed;
   }
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-display tracking-tight;
   }
 }
@@ -125,13 +143,16 @@
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: hsl(var(--background));
 }
+
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--muted));
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
 }
@@ -141,4 +162,20 @@
   background: hsl(var(--card) / 0.7);
   backdrop-filter: blur(12px);
   border: 1px solid hsl(var(--border) / 0.5);
+}
+
+/* Fix for html2canvas not supporting oklch or complex color functions */
+/* We force some variables to standard hex when capturing */
+.pdf-export-container {
+  --primary: 180 100% 50%;
+  --secondary: 260 100% 65%;
+  --background: 0 0% 100%;
+  --foreground: 224 71% 4%;
+  --border: 215 28% 90%;
+}
+
+.pdf-export-container * {
+  /* Override any oklch usage from Tailwind 4 */
+  border-color: #e2e8f0 !important;
+  color-scheme: light !important;
 }

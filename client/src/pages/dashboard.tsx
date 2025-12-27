@@ -43,6 +43,7 @@ export default function Dashboard() {
   });
 
   const recentSimulations = simulations?.slice(0, 5) || [];
+  const latestAnalyzed = simulations?.find((s: any) => s.status === 'analyzed' && s.interactionData);
 
   // Calculate dynamic trends based on simulation data
   const trends = useMemo(() => {
@@ -179,15 +180,15 @@ export default function Dashboard() {
             </CardDescription>
           </CardHeader>
           <div className="flex-1 min-h-[250px] w-full relative">
-            {simulations?.[0]?.interactionData ? (
+            {latestAnalyzed?.interactionData ? (
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={[
-                  { subject: 'H-Bonds', A: simulations[0].interactionData.hBonds || 0, fullMark: 10 },
-                  { subject: 'Hydrophobic', A: simulations[0].interactionData.hydrophobic || 0, fullMark: 10 },
-                  { subject: 'Pi-Stacking', A: simulations[0].interactionData.piStacking || 0, fullMark: 10 },
-                  { subject: 'Salt Bridges', A: simulations[0].interactionData.saltBridges || 0, fullMark: 10 },
-                  { subject: 'Stability', A: (simulations[0].interactionData.stabilityScore || 0) / 10, fullMark: 10 },
-                  { subject: 'Drug-Likeness', A: (simulations[0].interactionData.drugLikenessScore || 0) / 10, fullMark: 10 },
+                  { subject: 'H-Bonds', A: latestAnalyzed.interactionData.hBonds || 0, fullMark: 10 },
+                  { subject: 'Hydrophobic', A: latestAnalyzed.interactionData.hydrophobic || 0, fullMark: 10 },
+                  { subject: 'Pi-Stacking', A: latestAnalyzed.interactionData.piStacking || 0, fullMark: 10 },
+                  { subject: 'Salt Bridges', A: latestAnalyzed.interactionData.saltBridges || 0, fullMark: 10 },
+                  { subject: 'Stability', A: (latestAnalyzed.interactionData.stabilityScore || 0) / 10, fullMark: 10 },
+                  { subject: 'Drug-Likeness', A: (latestAnalyzed.interactionData.drugLikenessScore || 0) / 10, fullMark: 10 },
                 ]}>
                   <PolarGrid stroke="hsl(var(--border))" />
                   <PolarAngleAxis dataKey="subject" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />

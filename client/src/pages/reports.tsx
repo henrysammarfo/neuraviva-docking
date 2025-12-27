@@ -214,7 +214,7 @@ export default function Reports() {
             </div>
           </div>
         ) : (
-          <div ref={reportContentRef} className="flex-1 bg-white text-slate-900 rounded-lg overflow-hidden shadow-2xl overflow-y-auto">
+          <div ref={reportContentRef} className="flex-1 bg-white text-slate-900 rounded-lg overflow-hidden shadow-2xl overflow-y-auto pdf-export-container">
             <div className="max-w-4xl mx-auto p-12 space-y-8">
               {/* Report Header */}
               <div className="flex justify-between items-end border-b border-slate-200 pb-6">
