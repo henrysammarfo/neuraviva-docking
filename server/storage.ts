@@ -38,8 +38,13 @@ export async function comparePassword(password: string, hash: string): Promise<b
 // Database connection
 const connectionString = process.env.DATABASE_URL;
 
-if (!connectionString && process.env.NODE_ENV === "production") {
-  console.warn("⚠️ DATABASE_URL is not set in production. Database operations will fail.");
+if (!connectionString && (process.env.NODE_ENV === "production" || process.env.VERCEL)) {
+  const errorMsg = "❌ CRITICAL: DATABASE_URL is not set. Database operations will fail. Please add this variable to your Vercel project settings.";
+  console.error(errorMsg);
+  // On Vercel, we want this to be loud and clear in the logs
+  if (process.env.VERCEL) {
+    throw new Error(errorMsg);
+  }
 }
 
 const pool = new pg.Pool({
