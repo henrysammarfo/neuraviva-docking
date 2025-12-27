@@ -56,6 +56,21 @@ if (connectionString) {
 
 const db = drizzle(pool);
 
+// Pre-flight Pulse Check
+(async () => {
+  try {
+    console.log("[storage] 🩺 Starting DB Pulse Check...");
+    const result = await db.execute(sql`SELECT 1`);
+    if (result) {
+      console.log("[storage] ✅ DB Pulse Check PASSED. Connection is healthy.");
+    }
+  } catch (err: any) {
+    console.error("[storage] ❌ DB Pulse Check FAILED!");
+    console.error(`[storage] Error: ${err.message}`);
+    if (err.detail) console.error(`[storage] Detail: ${err.detail}`);
+    if (err.code) console.error(`[storage] Postgres Code: ${err.code}`);
+  }
+})();
 
 export interface IStorage {
   // User methods
